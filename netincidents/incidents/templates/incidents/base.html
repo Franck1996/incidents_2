@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="fr" data-bs-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}NetIncidents{% endblock %} — Gestion d'incidents réseaux</title>
+  <!-- Bootstrap 5 -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Bootstrap Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --sidebar-width: 260px;
+      --sidebar-bg: linear-gradient(180deg, #0b1220 0%, #111c34 52%, #18263f 100%);
+      --sidebar-text: #94a3b8;
+      --sidebar-active: #f97316;
+      --topbar-h: 64px;
+      --accent: #f97316;
+      --accent-dark: #dc2626;
+      --accent-soft: #ffedd5;
+      --surface: rgba(255,255,255,.78);
+      --surface-strong: #ffffff;
+      --border-soft: rgba(148, 163, 184, .22);
+      --ink: #0f172a;
+      --muted: #64748b;
+      --presence-card-bg: rgba(15, 23, 42, 0.56);
+      --presence-border: rgba(148, 163, 184, 0.12);
+    }
+    * { font-family: 'Inter', sans-serif; }
+    body {
+      background:
+        radial-gradient(circle at top left, rgba(249,115,22,.10), transparent 28%),
+        radial-gradient(circle at bottom right, rgba(239,68,68,.08), transparent 26%),
+        linear-gradient(180deg, #f7fafc 0%, #eef4f7 100%);
+      min-height: 100vh;
+      color: var(--ink);
+    }
+
+    /* ── SIDEBAR ── */
+    #sidebar {
+      position: fixed; top: 0; left: 0; height: 100vh;
+      width: var(--sidebar-width); background: var(--sidebar-bg);
+      z-index: 1000; transition: all .3s ease; overflow-y: auto;
+      box-shadow: 16px 0 40px rgba(2, 6, 23, .18);
+    }
+    #sidebar .sidebar-brand {
+      padding: 1.5rem 1.25rem;
+      border-bottom: 1px solid rgba(255,255,255,.08);
+    }
+    #sidebar .brand-icon {
+      width: 42px; height: 42px; background: linear-gradient(135deg, #f59e0b, #ef4444);
+      border-radius: 10px; display: inline-flex; align-items: center;
+      justify-content: center; font-size: 1.25rem; margin-right: .75rem;
+      box-shadow: 0 10px 30px rgba(239, 68, 68, .18);
+    }
+    #sidebar .brand-text { color: #f8fafc; font-weight: 700; font-size: 1.1rem; letter-spacing: .01em; }
+    #sidebar .brand-sub { color: #fdba74; font-size: .72rem; }
+    #sidebar .nav-section {
+      padding: .75rem 1.25rem .25rem;
+      color: #fdba74; font-size: .68rem; font-weight: 700;
+      letter-spacing: .08em; text-transform: uppercase;
+    }
+    #sidebar .nav-link {
+      color: #dbe7ff; padding: .68rem 1rem;
+      border-radius: 12px; margin: 4px .75rem;
+      display: flex; align-items: center; gap: .75rem;
+      font-size: .875rem; transition: all .2s;
+      border: 1px solid transparent;
+      background: rgba(255,255,255,.02);
+    }
+    #sidebar .nav-link:hover {
+      background: rgba(148,163,184,.12);
+      color: #fff;
+      border-color: rgba(148,163,184,.12);
+      transform: translateX(2px);
+    }
+    #sidebar .nav-link.active {
+      background: linear-gradient(90deg, rgba(249,115,22,.2), rgba(239,68,68,.12));
+      color: #f8fafc;
+      font-weight: 600;
+      border-color: rgba(249,115,22,.24);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.05);
+    }
+    #sidebar .nav-link .bi { font-size: 1rem; width: 18px; text-align: center; }
+    #sidebar .badge-nav { margin-left: auto; font-size: .65rem; }
+    #sidebar .presence-card {
+      margin: .75rem;
+      padding: 1rem;
+      border-radius: 18px;
+      background:
+        radial-gradient(circle at top right, rgba(249,115,22,.18), transparent 34%),
+        linear-gradient(180deg, rgba(15,23,42,.94), var(--presence-card-bg));
+      border: 1px solid var(--presence-border);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.04), 0 12px 30px rgba(2,6,23,.18);
+    }
+    #sidebar .presence-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: .75rem;
+      margin-bottom: .8rem;
+    }
+    #sidebar .presence-title {
+      color: #f8fafc;
+      font-size: .84rem;
+      font-weight: 700;
+      letter-spacing: .01em;
+    }
+    #sidebar .presence-subtitle {
+      color: #8fb0d8;
+      font-size: .68rem;
+      margin-top: .1rem;
+    }
+    #sidebar .presence-count {
+      min-width: 42px;
+      height: 42px;
+      border-radius: 14px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(180deg, rgba(249,115,22,.24), rgba(239,68,68,.16));
+      border: 1px solid rgba(249,115,22,.24);
+      color: #ffedd5;
+    }
+    #sidebar .presence-count strong {
+      font-size: .95rem;
+      line-height: 1;
+    }
+    #sidebar .presence-count span {
+      font-size: .56rem;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+    }
+    #sidebar .presence-user {
+      display: flex;
+      align-items: center;
+      gap: .7rem;
+      padding: .7rem .15rem;
+      color: #cbd5e1;
+      font-size: .8rem;
+      border-bottom: 1px solid rgba(148,163,184,.08);
+    }
+    #sidebar .presence-user:last-child { border-bottom: 0; }
+    #sidebar .presence-avatar {
+      width: 38px;
+      height: 38px;
+      border-radius: 12px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, rgba(249,115,22,.26), rgba(239,68,68,.18));
+      border: 1px solid rgba(249,115,22,.16);
+      color: #fff7ed;
+      font-weight: 700;
+      font-size: .82rem;
+      flex-shrink: 0;
+    }
+    #sidebar .presence-content {
+      min-width: 0;
+      flex: 1;
+    }
+    #sidebar .presence-name {
+      color: #f8fafc;
+      font-size: .78rem;
+      font-weight: 600;
+      line-height: 1.15;
+    }
+    #sidebar .presence-meta {
+      color: #94a3b8;
+      font-size: .68rem;
+      line-height: 1.2;
+      margin-top: .12rem;
+    }
+    #sidebar .presence-role {
+      display: inline-flex;
+      align-items: center;
+      gap: .35rem;
+      padding: .18rem .5rem;
+      border-radius: 999px;
+      background: rgba(148,163,184,.11);
+      color: #cbd5e1;
+      font-size: .62rem;
+      margin-top: .25rem;
+    }
+    #sidebar .presence-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: .3rem;
+      flex-shrink: 0;
+      min-width: 50px;
+    }
+    #sidebar .presence-label {
+      font-size: .58rem;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: #94a3b8;
+    }
+    #sidebar .presence-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      position: relative;
+    }
+    #sidebar .presence-dot.online {
+      background: #f97316;
+      box-shadow: 0 0 0 4px rgba(249,115,22,.16);
+    }
+    #sidebar .presence-dot.online::after {
+      content: '';
+      position: absolute;
+      inset: -5px;
+      border-radius: 50%;
+      border: 1px solid rgba(249,115,22,.35);
+      animation: pulseOnline 1.8s ease-out infinite;
+    }
+    #sidebar .presence-dot.offline { background: #64748b; }
+    #sidebar .presence-empty {
+      padding: .7rem 0 .2rem;
+      text-align: center;
+      color: #94a3b8;
+      font-size: .72rem;
+    }
+    @keyframes pulseOnline {
+      0% { transform: scale(.8); opacity: .8; }
+      100% { transform: scale(1.5); opacity: 0; }
+    }
+
+    /* ── TOPBAR ── */
+    #topbar {
+      position: fixed; top: 0; left: var(--sidebar-width); right: 0;
+      height: var(--topbar-h);
+      background: rgba(255,255,255,.78);
+      backdrop-filter: blur(18px);
+      border-bottom: 1px solid rgba(226,232,240,.9);
+      box-shadow: 0 10px 30px rgba(15,23,42,.04);
+      z-index: 999;
+      display: flex; align-items: center; padding: 0 1.5rem;
+      gap: 1rem;
+    }
+    #topbar .page-title { font-weight: 600; font-size: 1.1rem; flex: 1; }
+    #topbar .topbar-btn {
+      width: 38px; height: 38px; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      background: rgba(248,250,252,.92);
+      border: 1px solid rgba(226,232,240,.95);
+      color: #64748b; cursor: pointer; transition: all .2s;
+      text-decoration: none; position: relative;
+    }
+    #topbar .topbar-btn:hover {
+      background: #ffffff;
+      color: #1e293b;
+      transform: translateY(-1px);
+      box-shadow: 0 8px 20px rgba(15,23,42,.08);
+    }
+    .notif-badge {
+      position: absolute; top: -4px; right: -4px;
+      background: #ef4444; color: #fff; border-radius: 50%;
+      width: 16px; height: 16px; font-size: .6rem;
+      display: flex; align-items: center; justify-content: center;
+    }
+
+    /* ── MAIN CONTENT ── */
+    #main {
+      margin-left: var(--sidebar-width);
+      padding-top: var(--topbar-h);
+      min-height: 100vh;
+    }
+    .main-inner { padding: 1.75rem; }
+
+    /* ── CARDS ── */
+    .card {
+      border: 1px solid var(--border-soft);
+      border-radius: 20px;
+      background: linear-gradient(180deg, rgba(255,255,255,.92), rgba(255,255,255,.82));
+      box-shadow: 0 18px 40px rgba(15,23,42,.06);
+      overflow: hidden;
+    }
+    .card-header {
+      background: linear-gradient(180deg, rgba(255,255,255,.88), rgba(248,250,252,.78));
+      border-bottom: 1px solid rgba(226,232,240,.9);
+      font-weight: 700;
+      color: #0f172a;
+    }
+
+    /* ── STAT CARDS ── */
+    .stat-card {
+      border-radius: 20px;
+      padding: 1.25rem;
+      border: 1px solid rgba(226,232,240,.95);
+      background:
+        radial-gradient(circle at top right, rgba(13,148,136,.08), transparent 35%),
+        linear-gradient(180deg, rgba(255,255,255,.96), rgba(248,250,252,.88));
+      box-shadow: 0 18px 34px rgba(15,23,42,.05);
+    }
+    .stat-card .stat-icon {
+      width: 46px; height: 46px; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.3rem;
+    }
+    .stat-card .stat-value { font-size: 1.9rem; font-weight: 700; line-height: 1; }
+    .stat-card .stat-label { color: #64748b; font-size: .8rem; margin-top: .25rem; }
+
+    /* ── BADGES PRIORITÉ / STATUT ── */
+    .badge-critique { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+    .badge-haute    { background: #fff7ed; color: #ea580c; border: 1px solid #fed7aa; }
+    .badge-moyenne  { background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; }
+    .badge-basse    { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
+    .badge-ouvert   { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+    .badge-en_cours { background: #fffbeb; color: #d97706; border: 1px solid #fde68a; }
+    .badge-resolu   { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
+    .badge-ferme    { background: #f8fafc; color: #64748b; border: 1px solid #e2e8f0; }
+    .incident-badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 3px 10px; border-radius: 20px; font-size: .75rem; font-weight: 500;
+    }
+
+    /* ── TIMELINE HISTORIQUE ── */
+    .timeline { position: relative; padding-left: 1.5rem; }
+    .timeline::before {
+      content: ''; position: absolute; left: 7px; top: 0; bottom: 0;
+      width: 2px; background: #e2e8f0;
+    }
+    .timeline-item { position: relative; margin-bottom: 1.25rem; }
+    .timeline-dot {
+      position: absolute; left: -1.5rem; width: 14px; height: 14px;
+      border-radius: 50%; border: 2px solid #e2e8f0; background: #fff;
+      top: 4px;
+    }
+
+    /* ── TABLES ── */
+    .table-hover tbody tr:hover { background: #f8fafc; }
+    .table th { font-size: .8rem; font-weight: 600; color: #64748b;
+                text-transform: uppercase; letter-spacing: .04em; }
+    .table > :not(caption) > * > * { border-bottom-color: rgba(226,232,240,.85); }
+
+    /* ── ALERTS / MESSAGES ── */
+    .django-messages { position: fixed; top: calc(var(--topbar-h) + 1rem); right: 1rem; z-index: 9999; width: 360px; }
+
+    /* ── DARK MODE TOGGLE ── */
+    [data-bs-theme="dark"] body { background: #0f172a; }
+    [data-bs-theme="dark"] #topbar { background: #1e293b; border-color: #334155; }
+    [data-bs-theme="dark"] .card { background: #1e293b; border-color: #334155; }
+    [data-bs-theme="dark"] .stat-card { background: #1e293b; border-color: #334155; }
+    [data-bs-theme="dark"] .table th { color: #94a3b8; }
+    [data-bs-theme="dark"] #sidebar .presence-card {
+      background:
+        radial-gradient(circle at top right, rgba(249,115,22,.2), transparent 34%),
+        linear-gradient(180deg, rgba(15,23,42,.95), rgba(15,23,42,.82));
+    }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 768px) {
+      #sidebar { transform: translateX(-100%); }
+      #sidebar.show { transform: translateX(0); }
+      #topbar { left: 0; }
+      #main { margin-left: 0; }
+      #sidebar .presence-card { margin-bottom: 1.5rem; }
+    }
+
+    /* ── MISC ── */
+    .btn {
+      border-radius: 12px;
+      font-weight: 600;
+      transition: transform .18s ease, box-shadow .18s ease, background-color .18s ease;
+    }
+    .btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 10px 22px rgba(15,23,42,.08);
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent), #14b8a6);
+      border-color: transparent;
+      color: #fff;
+    }
+    .btn-primary:hover {
+      background: linear-gradient(135deg, var(--accent-dark), #0f766e);
+      border-color: transparent;
+      color: #fff;
+    }
+    .btn-outline-primary {
+      color: var(--accent);
+      border-color: rgba(15,118,110,.28);
+      background: rgba(255,255,255,.7);
+    }
+    .btn-outline-primary:hover {
+      background: rgba(15,118,110,.08);
+      color: var(--accent-dark);
+      border-color: rgba(15,118,110,.4);
+    }
+    .btn-outline-secondary {
+      color: #475569;
+      border-color: rgba(148,163,184,.35);
+      background: rgba(255,255,255,.6);
+    }
+    .btn-outline-danger {
+      background: rgba(255,255,255,.65);
+    }
+    .form-control, .form-select {
+      border-radius: 14px;
+      border: 1px solid rgba(203,213,225,.95);
+      background: rgba(255,255,255,.92);
+      color: #0f172a;
+      min-height: 46px;
+    }
+    textarea.form-control { min-height: 120px; }
+    .form-control::placeholder { color: #94a3b8; }
+    .form-control:focus, .form-select:focus {
+      border-color: rgba(15,118,110,.45);
+      box-shadow: 0 0 0 4px rgba(20,184,166,.12);
+      background: #fff;
+    }
+    .page-link { color: var(--accent); }
+    .page-item.active .page-link { background: var(--accent); border-color: var(--accent); }
+  </style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<nav id="sidebar">
+  <div class="sidebar-brand d-flex align-items-center">
+    <div class="brand-icon text-white"><i class="bi bi-wifi"></i></div>
+    <div>
+      <div class="brand-text">NetIncidents</div>
+      <div class="brand-sub">Gestion des incidents réseau</div>
+    </div>
+  </div>
+
+  <div class="pt-2 pb-3">
+    <div class="nav-section">Principal</div>
+    <a href="{% url 'dashboard' %}" class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+      <i class="bi bi-grid-1x2-fill"></i> Tableau de bord
+    </a>
+    <a href="{% url 'liste_incidents' %}" class="nav-link {% if 'incident' in request.resolver_match.url_name and 'equipement' not in request.resolver_match.url_name %}active{% endif %}">
+      <i class="bi bi-exclamation-triangle-fill"></i> Incidents
+      {% if nb_incidents_ouverts %}<span class="badge bg-danger badge-nav">{{ nb_incidents_ouverts }}</span>{% endif %}
+    </a>
+    <a href="{% url 'creer_incident' %}" class="nav-link">
+      <i class="bi bi-plus-circle-fill"></i> Nouvel incident
+    </a>
+
+    <div class="nav-section">Ressources</div>
+    <a href="{% url 'liste_equipements' %}" class="nav-link {% if 'equipement' in request.resolver_match.url_name %}active{% endif %}">
+      <i class="bi bi-hdd-network-fill"></i> Équipements
+    </a>
+
+    <div class="nav-section">Analyse</div>
+    <a href="{% url 'rapports' %}" class="nav-link {% if request.resolver_match.url_name == 'rapports' %}active{% endif %}">
+      <i class="bi bi-file-earmark-bar-graph-fill"></i> Rapports & Stats
+    </a>
+    <a href="{% url 'historique' %}" class="nav-link {% if request.resolver_match.url_name == 'historique' %}active{% endif %}">
+      <i class="bi bi-clock-history"></i> Historique
+    </a>
+    <a href="{% url 'notifications' %}" class="nav-link {% if request.resolver_match.url_name == 'notifications' %}active{% endif %}">
+      <i class="bi bi-bell-fill"></i> Notifications
+      {% if nb_notifs > 0 %}<span class="badge bg-danger badge-nav">{{ nb_notifs }}</span>{% endif %}
+    </a>
+
+    <div class="nav-section">Compte</div>
+    <a href="{% url 'mon_profil' %}" class="nav-link {% if request.resolver_match.url_name == 'mon_profil' %}active{% endif %}">
+      <i class="bi bi-person-circle"></i> Mon profil
+    </a>
+    <a href="/admin/" class="nav-link" target="_blank">
+      <i class="bi bi-shield-lock-fill"></i> Administration
+    </a>
+    <form method="post" action="{% url 'logout' %}" class="mx-3 mt-1">
+      {% csrf_token %}
+      <button type="submit" class="nav-link border-0 bg-transparent w-100 text-start"
+              onclick="return confirm('Se deconnecter ?')">
+        <i class="bi bi-box-arrow-left"></i> Deconnexion
+      </button>
+    </form>
+
+    <div class="nav-section">Presence</div>
+    <div class="presence-card">
+      <div class="presence-header">
+        <div>
+          <div class="presence-title">Presence en direct</div>
+          <div class="presence-subtitle">Visibilite immediate des sessions</div>
+        </div>
+        <div class="presence-count">
+          <strong>{{ total_utilisateurs_en_ligne }}</strong>
+          <span>online</span>
+        </div>
+      </div>
+      {% for profil in utilisateurs_connectes %}
+      <div class="presence-user">
+        <div class="presence-avatar">
+          {{ profil.user.username|slice:":1"|upper }}
+        </div>
+        <div class="presence-content">
+          <div class="presence-name">
+            {{ profil.user.get_full_name|default:profil.user.username }}
+            {% if request.user.id == profil.user.id %}<span class="text-info">(vous)</span>{% endif %}
+          </div>
+          <div class="presence-role">{{ profil.get_role_display }}</div>
+          <div class="presence-meta">
+            {% if profil.derniere_activite %}
+              Derniere activite: {{ profil.derniere_activite|date:"d/m H:i" }}
+            {% else %}
+              Jamais vu
+            {% endif %}
+          </div>
+        </div>
+        <div class="presence-state">
+          <span class="presence-dot {% if profil.est_en_ligne %}online{% else %}offline{% endif %}"
+                title="{% if profil.est_en_ligne %}En ligne{% else %}Hors ligne{% endif %}"></span>
+          <span class="presence-label">{% if profil.est_en_ligne %}online{% else %}offline{% endif %}</span>
+        </div>
+      </div>
+      {% empty %}
+      <div class="presence-empty">Aucun utilisateur visible pour le moment.</div>
+      {% endfor %}
+    </div>
+  </div>
+</nav>
+
+<!-- TOPBAR -->
+<div id="topbar">
+  <button class="d-md-none btn btn-sm me-2" onclick="document.getElementById('sidebar').classList.toggle('show')">
+    <i class="bi bi-list fs-5"></i>
+  </button>
+  <span class="page-title">{% block page_title %}NetIncidents{% endblock %}</span>
+
+  <!-- Boutons topbar -->
+  <a href="{% url 'notifications' %}" class="topbar-btn" title="Notifications">
+    <i class="bi bi-bell"></i>
+    {% if nb_notifs > 0 %}<span class="notif-badge">{{ nb_notifs }}</span>{% endif %}
+  </a>
+  <a href="{% url 'mon_profil' %}" class="topbar-btn" title="Profil">
+    <i class="bi bi-person"></i>
+  </a>
+  <div class="small text-muted d-none d-md-block">
+    {{ request.user.get_full_name|default:request.user.username }}
+    {% if request.user.profil %}· {{ request.user.profil.get_role_display }}{% endif %}
+  </div>
+  <button class="topbar-btn" id="themeToggle" title="Mode sombre" onclick="toggleTheme()">
+    <i class="bi bi-moon-stars"></i>
+  </button>
+</div>
+
+<!-- MESSAGES DJANGO -->
+{% if messages %}
+<div class="django-messages">
+  {% for msg in messages %}
+  <div class="alert alert-{% if msg.tags == 'error' %}danger{% else %}{{ msg.tags }}{% endif %} alert-dismissible fade show shadow-sm" role="alert">
+    <i class="bi bi-{% if msg.tags == 'success' %}check-circle{% elif msg.tags == 'error' %}x-circle{% else %}info-circle{% endif %} me-2"></i>
+    {{ msg }}
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<!-- MAIN CONTENT -->
+<main id="main">
+  <div class="main-inner">
+    {% block content %}{% endblock %}
+  </div>
+</main>
+
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+<script>
+  // Auto-hide messages after 5s
+  setTimeout(() => {
+    document.querySelectorAll('.django-messages .alert').forEach(el => {
+      new bootstrap.Alert(el).close();
+    });
+  }, 5000);
+
+  // Theme toggle
+  function toggleTheme() {
+    const html = document.documentElement;
+    const dark = html.getAttribute('data-bs-theme') === 'dark';
+    html.setAttribute('data-bs-theme', dark ? 'light' : 'dark');
+    localStorage.setItem('theme', dark ? 'light' : 'dark');
+    const icon = document.querySelector('#themeToggle .bi');
+    icon.className = dark ? 'bi bi-moon-stars' : 'bi bi-sun';
+  }
+  // Restore saved theme
+  (function() {
+    const saved = localStorage.getItem('theme');
+    if (saved) {
+      document.documentElement.setAttribute('data-bs-theme', saved);
+      const icon = document.querySelector('#themeToggle .bi');
+      if (icon) icon.className = saved === 'dark' ? 'bi bi-sun' : 'bi bi-moon-stars';
+    }
+  })();
+</script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>
