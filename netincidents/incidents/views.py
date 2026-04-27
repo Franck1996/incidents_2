@@ -9,6 +9,7 @@ from django.http import HttpResponse, JsonResponse
 from django.utils import timezone
 from django.core.paginator import Paginator
 from django.conf import settings
+from django.urls import reverse
 import json
 import calendar
 
@@ -58,6 +59,16 @@ class NetIncidentsLoginView(LoginView):
         context['demo_login_enabled'] = settings.DEBUG
         return context
 
+    def get_success_url(self):
+        utilisateur = getattr(self, '_authenticated_user', None) or self.request.user
+        return get_post_login_redirect_url(self.request, utilisateur)
+
+    def form_valid(self, form):
+        self._authenticated_user = form.get_user()
+        response = super().form_valid(form)
+        notify_login_notifications(self.request, self.request.user)
+        return response
+
 
 def connexion_demo(request):
     if request.method != 'POST':
@@ -87,7 +98,8 @@ def connexion_demo(request):
 
     login(request, user)
     messages.success(request, f"Connexion rapide activee pour {credentials['username']}.")
-    next_url = request.POST.get('next') or settings.LOGIN_REDIRECT_URL
+    notify_login_notifications(request, user)
+    next_url = get_post_login_redirect_url(request, user)
     return redirect(next_url)
 
 
@@ -127,6 +139,51 @@ def create_notification(utilisateur, message, incident=None):
         )
 
 
+def notify_login_notifications(request, utilisateur):
+    notifications_non_lues = list(
+        Notification.objects.filter(utilisateur=utilisateur, lue=False)
+        .select_related('incident')
+        .order_by('-date_creation')[:3]
+    )
+    total_notifications = Notification.objects.filter(utilisateur=utilisateur, lue=False).count()
+
+    if not notifications_non_lues:
+        return
+
+    extrait = " | ".join(notification.message for notification in notifications_non_lues)
+    if total_notifications > len(notifications_non_lues):
+        extrait = f"{extrait} | +{total_notifications - len(notifications_non_lues)} autres"
+
+    if get_user_role(utilisateur) == 'technicien':
+        messages.warning(
+            request,
+            f"Vous avez {total_notifications} notification(s) non lue(s) : {extrait}",
+        )
+    else:
+        messages.info(
+            request,
+            f"{total_notifications} notification(s) non lue(s) : {extrait}",
+        )
+
+
+def get_post_login_redirect_url(request, utilisateur):
+    next_url = request.POST.get('next') or settings.LOGIN_REDIRECT_URL
+    destinations_par_defaut = {
+        '',
+        '/',
+        settings.LOGIN_REDIRECT_URL,
+        reverse('accueil'),
+        reverse('dashboard'),
+    }
+    if (
+        get_user_role(utilisateur) == 'technicien'
+        and Notification.objects.filter(utilisateur=utilisateur, lue=False).exists()
+        and next_url in destinations_par_defaut
+    ):
+        return reverse('notifications')
+    return next_url
+
+
 def notify_incident_created(incident):
     create_notification(
         incident.cree_par,
@@ -134,9 +191,20 @@ def notify_incident_created(incident):
         incident=incident,
     )
     if incident.assigne_a and incident.assigne_a != incident.cree_par:
+        role_assigne = get_user_role(incident.assigne_a)
+        if role_assigne == 'technicien':
+            message = (
+                f"Incident #{incident.id} cree par {get_user_display(incident.cree_par)} "
+                f"et deja assigne a vous. Vous pouvez maintenant le prendre en charge."
+            )
+        else:
+            message = (
+                f"Nouveau ticket #{incident.id} cree par {get_user_display(incident.cree_par)}. "
+                f"Merci de l'adresser a un technicien."
+            )
         create_notification(
             incident.assigne_a,
-            f"Nouveau ticket #{incident.id} cree par {get_user_display(incident.cree_par)}. Merci de l'adresser a un technicien.",
+            message,
             incident=incident,
         )
 
