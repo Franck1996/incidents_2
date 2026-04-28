@@ -224,19 +224,22 @@ def notify_incident_assignment(incident, assigned_by):
         )
 
 
-def notify_technician_completed(incident, technician, nouveau_statut, ancien_statut):
+def notify_technician_status_change(incident, technician, nouveau_statut, ancien_statut):
     """
-    Lorsqu'un technicien termine le traitement (résolu ou fermé), notifie tous les administrateurs.
-    Informe aussi le demandeur lors du passage à « résolu ».
+    Lorsqu'un technicien modifie le statut d'un incident, notifie les administrateurs.
+    Informe aussi le demandeur lors du passage à « resolu ».
     """
     if get_user_role(technician) != 'technicien':
         return
     if ancien_statut == nouveau_statut:
         return
-    if nouveau_statut not in ('resolu', 'ferme'):
+    if nouveau_statut not in ('en_cours', 'resolu', 'ferme'):
         return
 
     tech_name = get_user_display(technician)
+    libelles_statut = dict(Incident.STATUT)
+    libelle_nouveau = libelles_statut.get(nouveau_statut, nouveau_statut)
+    libelle_ancien = libelles_statut.get(ancien_statut, ancien_statut)
 
     if nouveau_statut == 'resolu' and ancien_statut != 'resolu':
         if incident.cree_par and incident.cree_par != technician:
@@ -245,15 +248,10 @@ def notify_technician_completed(incident, technician, nouveau_statut, ancien_sta
                 f"Votre incident #{incident.id} a ete resolu par {tech_name}.",
                 incident=incident,
             )
-        msg_admin = (
-            f"Incident #{incident.id} : le technicien {tech_name} a termine le traitement (statut : resolu)."
-        )
-    elif nouveau_statut == 'ferme' and ancien_statut != 'ferme':
-        msg_admin = (
-            f"Incident #{incident.id} : le technicien {tech_name} a termine le traitement (statut : ferme)."
-        )
-    else:
-        return
+    msg_admin = (
+        f"Incident #{incident.id} : le technicien {tech_name} a modifie le statut "
+        f"de {libelle_ancien.lower()} vers {libelle_nouveau.lower()}."
+    )
 
     for admin in User.objects.filter(is_active=True, profil__role='admin').exclude(pk=technician.pk):
         create_notification(admin, msg_admin, incident=incident)
@@ -678,7 +676,7 @@ def modifier_incident(request, pk):
                 incident.save()
                 form.save_m2m()
                 if ancien_statut != nouveau_statut:
-                    notify_technician_completed(incident, request.user, nouveau_statut, ancien_statut)
+                    notify_technician_status_change(incident, request.user, nouveau_statut, ancien_statut)
 
                 if ancien_assigne_id != incident.assigne_a_id and get_user_role(request.user) == 'admin':
                     notify_incident_assignment(incident, request.user)
@@ -765,7 +763,7 @@ def changer_statut_ajax(request, pk):
                 modifie_par=request.user,
             )
             if ancien != nouveau_statut:
-                notify_technician_completed(incident, request.user, nouveau_statut, ancien)
+                notify_technician_status_change(incident, request.user, nouveau_statut, ancien)
 
             response_message = {
                 'en_cours': "Incident pris en charge.",
